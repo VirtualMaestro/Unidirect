@@ -32,8 +32,8 @@ namespace Unidirect.Unity.Pooling
             
             foreach (var poolItem in poolPrefabs)
             {
-                if (!Unidirect.Pooling.Pools.I.Has(poolItem.prefab))
-                    _pools[i++] = Unidirect.Pooling.Pools.I.Get(poolItem.prefab, poolItem.prewarmCount, true);
+                if (!Pools.I.Has(poolItem.prefab))
+                    _pools[i++] = Pools.I.Get(poolItem.prefab, poolItem.prewarmCount, true);
             }    
         }
         

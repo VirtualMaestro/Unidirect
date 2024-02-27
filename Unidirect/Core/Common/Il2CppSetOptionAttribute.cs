@@ -1,6 +1,7 @@
+#if ENABLE_IL2CPP
 using System;
 
-namespace Unidirect.Core.Common
+namespace Unity.IL2CPP.CompilerServices
 {
     /// <summary>
     /// The code generation options available for IL to C++ conversion.
@@ -72,3 +73,4 @@ namespace Unidirect.Core.Common
         }
     }
 }
+#endif

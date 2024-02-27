@@ -8,15 +8,22 @@ namespace Unidirect.Core.Mappers
     {
         private static T _instance;
         private static IReset<T> _resetInstance;
+        private static readonly int _actionId = ActionUniqueId.GetId;
 
-        public static int ActionId { get; } = ActionUniqueId.GetId;
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static int ActionId()
+        {
+            return _actionId;
+        }
         public static bool Has => _instance != null;
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void Reset()
         {
             _resetInstance?.Reset();
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static T Get()
         {
             if (_instance == null)

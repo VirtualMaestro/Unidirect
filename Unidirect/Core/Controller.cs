@@ -22,7 +22,7 @@ namespace Unidirect.Core
     public class Controller<TModel> : IActionSender where TModel : class, new()
     {
         private delegate IMediator MediatorCreator(out bool isCreated);
-        
+
         private TModel _model;
         private Response _response = new();
         private Dictionary<Type, MediatorCreator> _viewMediatorsMap = new();
@@ -34,7 +34,7 @@ namespace Unidirect.Core
 
         private bool _isModelChanged;
         private bool _isInitialized;
-        
+
         protected TModel Model() => _model;
 
         protected Controller(TModel model)
@@ -57,11 +57,11 @@ namespace Unidirect.Core
         {
             // update controller
             OnUpdate();
-            
+
             // update model's listeners
             if (_isModelChanged)
                 _UpdateModelListeners();
-            
+
             // update mediators
             for (var i = 0; i < _updateMediators.Count; i++)
                 _updateMediators[i].OnUpdate();
@@ -70,28 +70,29 @@ namespace Unidirect.Core
         public void FixedUpdate()
         {
             OnFixedUpdate();
-            
+
             for (var i = 0; i < _fixedUpdateMediators.Count; i++)
                 _fixedUpdateMediators[i].OnFixedUpdate();
         }
 
-        protected void MapView<TMediator>() where TMediator: IMediator
+        protected void MapView<TMediator>() where TMediator : IMediator
         {
             MediatorStore<TMediator>.IsStandAlone = true;
 
             var mediator = MediatorStore<TMediator>.Get(out var isCreated);
-        
+
             if (isCreated)
                 _InitializeMediator(mediator);
         }
 
-        protected void MapView<TView, TMediator>(bool isStandAlone = false) where TView: IView where TMediator: IMediator
+        protected void MapView<TView, TMediator>(bool isStandAlone = false)
+            where TView : IView where TMediator : IMediator
         {
             MediatorStore<TMediator>.IsStandAlone = isStandAlone;
             _MapView(typeof(TView), MediatorStore<TMediator>.Get, MediatorStore<TMediator>.Clear);
         }
 
-        protected void MapView<TMediator>(IView view, bool isStandAlone = false) where TMediator: IMediator
+        protected void MapView<TMediator>(IView view, bool isStandAlone = false) where TMediator : IMediator
         {
             MediatorStore<TMediator>.IsStandAlone = isStandAlone;
             _MapView(view.ViewType, MediatorStore<TMediator>.Get, MediatorStore<TMediator>.Clear);
@@ -103,15 +104,24 @@ namespace Unidirect.Core
             _viewMediatorsMap.TryAdd(viewType, creationFunc);
             _finalizers.Add(clearFunc);
         }
-        
+
         /// <summary>
         /// Maps LogicAction to System and returns action id that serves as unique identifier for LogicAction.
         /// </summary>
-        protected void MapAction<TAction, TSystem>() 
-            where TSystem : ISystem<TAction, TModel>
+        protected void MapAction<TAction, TSystem>() where TSystem : ISystem<TAction, TModel>
         {
-            ActionSystemMapper<TAction, TModel>.Map<TSystem>();
-            _finalizers.Add(ActionSystemMapper<TAction, TModel>.Clear);
+            ActionMapper<TAction, TModel>.MapSystem<TSystem>();
+            _finalizers.Add(ActionMapper<TAction, TModel>.Clear);
+        }
+
+        /// <summary>
+        /// Maps LogicAction to a function handler.
+        /// It can be used for communicating between a Mediator and a Controller when any System isn't involved.
+        /// </summary>
+        protected void MapAction<TAction>(Action<TAction> handler)
+        {
+            ActionMapper<TAction, TModel>.MapHandler(handler);
+            _finalizers.Add(ActionMapper<TAction, TModel>.Clear);
         }
 
         public TAction GetAction<TAction>()
@@ -119,17 +129,25 @@ namespace Unidirect.Core
             return ActionStore<TAction>.Get();
         }
 
-        public Response Send<TAction>(TAction action) 
+        public Response Send<TAction>(TAction action)
         {
-            _response.ActionID = ActionStore<TAction>.ActionId;
-            _response.IsSuccess = true;
+            _response.ActionID = ActionStore<TAction>.ActionId();
+            _response.ActionType = typeof(TAction);
+            _response.IsModelUpdated = true;
             _response.Command = ResponseCommand.None;
-            
-            ActionSystemMapper<TAction, TModel>.Get().Process(action, _model, _response);
 
-            _isModelChanged = _response.IsSuccess;
-                
-            OnResponse(_response);
+            if (ActionMapper<TAction, TModel>.HasSystem())
+            {
+                ActionMapper<TAction, TModel>.GetSystem().Process(action, _model, _response);
+                OnResponse(_response);
+            }
+            else
+                _response.IsModelUpdated = false;
+
+            _isModelChanged = _response.IsModelUpdated;
+            
+            if (ActionMapper<TAction, TModel>.HasHandler())
+                ActionMapper<TAction, TModel>.GetHandler()(action);
 
             ActionStore<TAction>.Reset();
 
@@ -145,26 +163,26 @@ namespace Unidirect.Core
         {
             // user definition
         }
-        
+
         protected virtual void OnFixedUpdate()
         {
             // user definition
         }
-        
+
         protected virtual void OnDispose()
         {
             // user definition
         }
-        
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void _RunInitializers()
         {
             for (var i = 0; i < _initializers.Count; i++)
                 _initializers[i].Invoke();
-            
+
             _initializers.Clear();
         }
-        
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void _UpdateModelListeners()
         {
@@ -173,14 +191,14 @@ namespace Unidirect.Core
             for (var i = 0; i < _modelUpdateMediators.Count; i++)
                 _modelUpdateMediators[i].OnModelUpdate(_model);
         }
-        
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void _InitializeMediator(IMediator mediator)
         {
             mediator.Sender = this;
-            
+
             _finalizers.Add(mediator.OnDispose);
-            
+
             if (mediator is IInitialize initializeMediator)
             {
                 if (_isInitialized)
@@ -188,17 +206,17 @@ namespace Unidirect.Core
                 else
                     _initializers.Add(initializeMediator.OnInitialize);
             }
-            
+
             if (mediator is IUpdate updateMediator)
                 _updateMediators.Add(updateMediator);
-            
+
             if (mediator is IFixedUpdate fixedUpdateMediator)
                 _fixedUpdateMediators.Add(fixedUpdateMediator);
 
             if (mediator is IModelUpdate<TModel> modelUpdateMediator)
             {
                 _modelUpdateMediators.Add(modelUpdateMediator);
-                
+
                 if (_isInitialized)
                     modelUpdateMediator.OnModelUpdate(_model);
             }
@@ -209,14 +227,14 @@ namespace Unidirect.Core
         {
             if (mediator is IUpdate updateMediator)
                 _updateMediators.Remove(updateMediator);
-            
+
             if (mediator is IFixedUpdate fixedUpdateMediator)
                 _fixedUpdateMediators.Remove(fixedUpdateMediator);
 
             if (mediator is IModelUpdate<TModel> modelUpdateMediator)
                 _modelUpdateMediators.Remove(modelUpdateMediator);
         }
-        
+
         private void _OnViewReadyHandler(ViewReadyEvent viewEvent)
         {
             var view = viewEvent.View;
@@ -225,10 +243,10 @@ namespace Unidirect.Core
             if (_viewMediatorsMap.TryGetValue(viewType, out var mediatorCreator))
             {
                 var mediator = mediatorCreator.Invoke(out var isCreated);
-                
+
                 if (isCreated)
                     _InitializeMediator(mediator);
-                
+
                 mediator.OnViewAdded(view);
             }
             else
@@ -244,8 +262,8 @@ namespace Unidirect.Core
             {
                 var mediator = mediatorCreator.Invoke(out _);
                 mediator.OnViewDisposed(view);
-                
-                if (!mediator.IsStandAlone) 
+
+                if (!mediator.IsStandAlone)
                     _DeinitializeMediator(mediator);
             }
             else
@@ -266,7 +284,7 @@ namespace Unidirect.Core
 
             EventBus<ViewReadyEvent>.RemoveListener(_OnViewReadyHandler);
             EventBus<ViewDisposedEvent>.RemoveListener(_OnViewDisposedHandler);
-            
+
             _model = null;
             _response = null;
             _viewMediatorsMap.Clear();
