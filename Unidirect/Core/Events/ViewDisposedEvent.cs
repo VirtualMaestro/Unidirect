@@ -1,9 +1,9 @@
-﻿using Unidirect.Core.Common;
-using Unidirect.Core.View;
+﻿using Unidirect.Core.View;
+using Unidirect.Helpers;
 
 namespace Unidirect.Core.Events
 {
-    public class ViewDisposedEvent : IReset<ViewDisposedEvent>
+    public class ViewDisposedEvent : IEventReset
     {
         public IView View;
 

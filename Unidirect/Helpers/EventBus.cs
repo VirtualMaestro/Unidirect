@@ -57,6 +57,9 @@ namespace Unidirect.Helpers
             if (_IsChannelExist())
                 _instance.Dispatch(ref t);
 
+            if (_instance.IsEventReset)
+                ((IEventReset) t).Reset();
+            
             _events.Push(ref t);
         }
 
@@ -65,6 +68,9 @@ namespace Unidirect.Helpers
             if (_IsChannelExist())
                 _instance.Dispatch(ref t);
 
+            if (_instance.IsEventReset)
+                ((IEventReset) t).Reset();
+            
             _events.Push(ref t);
         }
 
@@ -114,6 +120,8 @@ namespace Unidirect.Helpers
 
         public int Count => _handlers?.Count ?? 0;
         public bool IsDisposed => _handlers == null;
+
+        public bool IsEventReset { get; } = typeof(T) is IEventReset ;
         
         public void Add(Action<T> handler)
         {
@@ -162,6 +170,7 @@ namespace Unidirect.Helpers
         void Remove(Action<T> handler);
         void Dispatch(ref T t);
         bool Contains(Action<T> handler);
+        bool IsEventReset { get; }
     }
 
     public interface IEventChannelGeneric
@@ -170,5 +179,10 @@ namespace Unidirect.Helpers
         void Clear(bool purgePool = false);
         void Dispose();
         bool IsDisposed { get; }
+    }
+
+    public interface IEventReset
+    {
+        public void Reset();
     }
 }

@@ -1,6 +1,6 @@
 ﻿namespace Unidirect.Core.Common
 {
-    public interface IReset<T>
+    public interface IActionReset
     {
         public void Reset();
     }

@@ -7,7 +7,7 @@ namespace Unidirect.Core.Mappers
     public static class ActionStore<T> 
     {
         private static T _instance;
-        private static IReset<T> _resetInstance;
+        private static IActionReset _resetInstance;
         private static readonly int _actionId = ActionUniqueId.GetId;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -36,7 +36,7 @@ namespace Unidirect.Core.Mappers
         private static void _Create()
         {
             _instance = Activator.CreateInstance<T>();
-            _resetInstance = _instance as IReset<T>;
+            _resetInstance = _instance as IActionReset;
         }
     }
     

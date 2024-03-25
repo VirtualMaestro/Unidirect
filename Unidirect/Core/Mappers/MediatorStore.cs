@@ -3,19 +3,17 @@ using Unidirect.Core.View;
 
 namespace Unidirect.Core.Mappers
 {
-    public static class MediatorStore<TMediator> where TMediator: IMediator
+    public static class MediatorStore<TMediator> where TMediator: Mediator
     {
-        public static bool IsStandAlone;
         private static TMediator _instance;
 
-        public static IMediator Get(out bool isCreated)
+        public static Mediator Get(out bool isCreated)
         {
-            isCreated = _instance == null;
+            isCreated = _instance == null || _instance.IsDisposed;
 
             if (isCreated)
             {
                 _instance = Activator.CreateInstance<TMediator>();
-                _instance.IsStandAlone = IsStandAlone;
             }
                 
             return _instance;

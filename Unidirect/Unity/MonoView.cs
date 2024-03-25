@@ -6,12 +6,12 @@ using UnityEngine;
 
 namespace Unidirect.Unity
 {
-    public class ViewMono<TView> : MonoBehaviour, IView<TView> where TView: MonoBehaviour
+    public class MonoView<TView> : MonoBehaviour, IView where TView: MonoBehaviour
     {
-        private static readonly Type ViewMonoType = typeof(TView);
+        public static readonly Type Type = typeof(TView);
         
         public bool IsDisposed { get; private set; }
-        public Type ViewType => ViewMonoType;
+        public Type ViewType => Type;
         
         private void Awake()
         {
